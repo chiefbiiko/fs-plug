@@ -1,0 +1,28 @@
+{
+  "name": "fs-plug",
+  "version": "0.0.0",
+  "description": "tcp server for simple file sharing",
+  "main": "index.js",
+  "scripts": {
+    "test": "tape test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chiefbiiko/fs-plug.git"
+  },
+  "keywords": [
+    "filesharing"
+  ],
+  "author": "Noah Anabiik Schwarz",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/chiefbiiko/fs-plug/issues"
+  },
+  "homepage": "https://github.com/chiefbiiko/fs-plug#readme",
+  "devDependencies": {
+    "tape": "^4.8.0"
+  },
+  "dependencies": {
+    "tar-fs": "^1.16.0"
+  }
+}
