@@ -25,12 +25,13 @@ tape('file sharing', function (t) {
     b.consume(10000, '127.0.0.1', 'file', selfie, dope, function (err) {
       if (err) t.end(err)
 
+      a.close()
+
       t.ok(fs.existsSync(dope), 'file shared')
       t.same(fs.readFileSync(selfie), fs.readFileSync(dope), 'identical files')
       t.is(a.supplied, 1, 'a should have supplied 1 file')
       t.is(b.consumed, 1, 'b should have consumed 1 file')
 
-      a.close()
       t.end()
     })
 
@@ -97,6 +98,33 @@ tape('in strict mode only whitelisted files are shared', function (t) {
       a.close()
 
       t.ok(err, 'expecting a consume timeout error')
+
+    })
+
+  })
+
+})
+
+tape('events emit bytes written/read', function (t) {
+
+  t.plan(1)
+
+  var a = fsPlug({ strict: false })
+  var b = fsPlug({ strict: false })
+  var logA = []
+  var logB = []
+
+  a.on('bytes-supplied', logA.push)
+  b.on('bytes-consumed', logB.push)
+
+  a.listen(10000, '127.0.0.1', function () {
+
+    b.consume(10000, '127.0.0.1', 'file', selfie, coke, function (err) {
+      if (err) t.end(err)
+
+      a.close()
+
+      t.same(logA, logB, 'written and read num bytes should be the same')
 
     })
 

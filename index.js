@@ -1,9 +1,9 @@
 var fs = require('fs')
 var net = require('net')
+var util = require('util')
 var zlib = require('zlib')
 var tar = require('tar-fs')
 var pump = require('pump')
-var inherits = require('util').inherits
 
 function noop () {}
 
@@ -25,7 +25,7 @@ function FilePlug (opts, onconsumer) {
 
   this._opts = opts
   this._opts.timeout = opts.timeout || 500
-  this._opts.strict = opts.strict === false ? false : true
+  this._opts.strict = opts.strict !== false
 
   this.supplied = 0
   this.consumed = 0
@@ -56,7 +56,7 @@ function FilePlug (opts, onconsumer) {
           onconsumer(null, filepath)
         })
 
-        gzip.on('data', function (_) {
+        gzip.on('readable', function () {
           self.emit('bytes-supplied', socket.bytesWritten)
         })
 
@@ -67,7 +67,7 @@ function FilePlug (opts, onconsumer) {
 
 }
 
-inherits(FilePlug, net.Server)
+util.inherits(FilePlug, net.Server)
 
 function consume (port, host, type, filepath, mypath, callback) {
   if (!callback) callback = noop
@@ -96,7 +96,7 @@ function consume (port, host, type, filepath, mypath, callback) {
         }
       })
 
-      socket.on('data', function (_) {
+      socket.on('readable', function () {
         self.emit('bytes-consumed', socket.bytesRead)
       })
 
