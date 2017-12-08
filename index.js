@@ -27,8 +27,8 @@ function FilePlug (opts, onconsumer) {
   this._opts.timeout = opts.timeout || 500
   this._opts.strict = opts.strict !== false
 
-  this.supplied = 0
-  this.consumed = 0
+  this._supplied = 0
+  this._consumed = 0
   this._whitelist = new Set()
 
   var self = this
@@ -52,7 +52,7 @@ function FilePlug (opts, onconsumer) {
         var gzip = zlib.createGzip()
         pump(readStream, gzip, socket, function (err) {
           if (err) return onconsumer(err)
-          self.supplied++
+          self._supplied++
           onconsumer(null, filepath)
         })
 
@@ -69,6 +69,14 @@ function FilePlug (opts, onconsumer) {
 
 util.inherits(FilePlug, net.Server)
 
+FilePlug.prototype.__defineGetter__('supplied', function () {
+  return this._supplied
+})
+
+FilePlug.prototype.__defineGetter__('consumed', function () {
+  return this._consumed
+})
+
 function consume (port, host, type, filepath, mypath, callback) {
   if (!callback) callback = noop
   var self = this
@@ -81,7 +89,7 @@ function consume (port, host, type, filepath, mypath, callback) {
 
       pump(socket, zlib.createGunzip(), writeStream, function (err) {
         if (err) return callback(err)
-        self.consumed++
+        self._consumed++
         if (type === 'file') {
           callback(null, mypath)
         } else {
