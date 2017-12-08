@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/chiefbiiko/fs-plug#readme",
   "devDependencies": {
+    "del": "^3.0.0",
     "tape": "^4.8.0"
   },
   "dependencies": {

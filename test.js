@@ -1,24 +1,24 @@
 var fs = require('fs')
 var path = require('path')
+var del = require('del')
 var tape = require('tape')
 var fsPlug = require('./index')
 
 var selfie = __filename
 var dope = selfie + ' yea!'
+var coke = selfie + ' yay!'
 var stash = path.join(__dirname, 'node_modules')
 var dopedir = stash + ' yea!'
 var bad = selfie.substr(0, 5)
 
 tape.onFinish(function () {
-  fs.unlink(dope, function (err) {
-    if (err) return console.error(err)
-  })
+  del.sync([ dope, coke, dopedir ])
 })
 
 tape('file sharing', function (t) {
 
-  var a = fsPlug()
-  var b = fsPlug()
+  var a = fsPlug({ strict: false })
+  var b = fsPlug({ strict: false })
 
   a.listen(10000, '127.0.0.1', function () {
 
@@ -40,8 +40,8 @@ tape('file sharing', function (t) {
 
 tape('dir sharing', function (t) {
 
-  var a = fsPlug()
-  var b = fsPlug()
+  var a = fsPlug({ strict: false })
+  var b = fsPlug({ strict: false })
 
   a.listen(10000, '127.0.0.1', function () {
 
@@ -66,12 +66,33 @@ tape('exceptions', function (t) {
 
   t.plan(1)
 
-  var a = fsPlug()
-  var b = fsPlug()
+  var a = fsPlug({ strict: false })
+  var b = fsPlug({ strict: false })
 
   a.listen(10000, '127.0.0.1', function () {
 
     b.consume(10000, '127.0.0.1', 'file', bad, dope, function (err) {
+
+      a.close()
+
+      t.ok(err, 'expecting a consume timeout error')
+
+    })
+
+  })
+
+})
+
+tape('in strict mode only whitelisted files are shared', function (t) {
+
+  t.plan(1)
+
+  var a = fsPlug({ strict: true })
+  var b = fsPlug({ strict: false })
+
+  a.listen(10000, '127.0.0.1', function () {
+
+    b.consume(10000, '127.0.0.1', 'file', selfie, coke, function (err) {
 
       a.close()
 

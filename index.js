@@ -23,16 +23,25 @@ function FilePlug (opts, onconsumer) {
   if (!opts) opts = {}
   if (!onconsumer) onconsumer = noop
 
+  this._opts = opts
+  this._opts.timeout = opts.timeout || 500
+  this._opts.strict = opts.strict === false ? false : true
+
   this.supplied = 0
   this.consumed = 0
-  this._opts = opts
+  this._whitelist = new Set()
 
   var self = this
 
   this.on('connection', function (socket) {
     socket.on('data', function (buf) {
       var filepath = buf.toString()
-      stat(filepath, opts, function (err, stats) {
+
+      if (self._opts.strict && !self._whitelist.has(filepath)) {
+        return onconsumer('illegal request 4 non-whitelisted resource')
+      }
+
+      stat(filepath, self._opts, function (err, stats) {
         if (err) return onconsumer(err)
 
         var readStream
@@ -52,6 +61,7 @@ function FilePlug (opts, onconsumer) {
         })
 
       })
+
     })
   })
 
@@ -59,13 +69,16 @@ function FilePlug (opts, onconsumer) {
 
 inherits(FilePlug, net.Server)
 
-function _consume (port, host, type, filepath, mypath, callback) {
+function consume (port, host, type, filepath, mypath, callback) {
   if (!callback) callback = noop
   var self = this
+
   var socket = net.connect(port, host, function () {
     socket.write(filepath, function () {
+
       var writeStream =
         fs.createWriteStream(type === 'file' ? mypath : mypath + '.tar')
+
       pump(socket, zlib.createGunzip(), writeStream, function (err) {
         if (err) return callback(err)
         self.consumed++
@@ -82,17 +95,27 @@ function _consume (port, host, type, filepath, mypath, callback) {
           })
         }
       })
+
       socket.on('data', function (_) {
         self.emit('bytes-consumed', socket.bytesRead)
       })
+
       setTimeout(function () {
         if (!socket.bytesRead) socket.destroy('consume timeout')
-      }, self._opts.timeout || 500)
+      }, self._opts.timeout)
+
     })
   })
-  return socket
 }
 
-FilePlug.prototype.consume = _consume
+FilePlug.prototype.consume = consume
+
+FilePlug.prototype.whitelist = function whitelist (filepath) {
+  this._whitelist.add(filepath)
+}
+
+FilePlug.prototype.blacklist = function blacklist (filepath) {
+  this._whitelist.delete(filepath)
+}
 
 module.exports = FilePlug
