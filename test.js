@@ -18,7 +18,7 @@ tape.onFinish(function () {
 tape('file sharing', function (t) {
 
   var a = fsPlug({ strict: false })
-  var b = fsPlug({ strict: false })
+  var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
 
@@ -42,7 +42,7 @@ tape('file sharing', function (t) {
 tape('dir sharing', function (t) {
 
   var a = fsPlug({ strict: false })
-  var b = fsPlug({ strict: false })
+  var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
 
@@ -68,7 +68,7 @@ tape('exceptions', function (t) {
   t.plan(1)
 
   var a = fsPlug({ strict: false })
-  var b = fsPlug({ strict: false })
+  var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
 
@@ -89,7 +89,7 @@ tape('in strict mode only whitelisted files are shared', function (t) {
   t.plan(1)
 
   var a = fsPlug({ strict: true })
-  var b = fsPlug({ strict: false })
+  var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
 
@@ -110,7 +110,7 @@ tape('events emit bytes written/read', function (t) {
   t.plan(1)
 
   var a = fsPlug({ strict: false })
-  var b = fsPlug({ strict: false })
+  var b = fsPlug()
   var logA = []
   var logB = []
 
