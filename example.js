@@ -2,6 +2,7 @@ var fsPlug = require('.')
 
 var a = fsPlug()
 var b = fsPlug()
+
 var file = __filename
 var copy = __filename + ' - copy'
 

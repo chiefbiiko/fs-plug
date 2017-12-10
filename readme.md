@@ -20,6 +20,7 @@ npm install --save fs-plug
 
 ``` js
 var fsPlug = require('fs-plug')
+
 var a = fsPlug()
 var b = fsPlug()
 
@@ -45,6 +46,46 @@ a.listen(10000, function () {
 ## API
 
 ### `var plug = fsPlug([opts][, onconsumer])`
+
+Create a new plug. Options default to:
+
+``` js
+{
+  dereference: false, // follow symlinks when looking up requested files?
+  strict: true, // only serve files if they have been whitelisted before?
+  timeout: 500 // max number of ms to wait for initial bytes when consuming
+}
+```
+
+The callback has the signature `onconsumer(err, mypath)` and will be called every time a file or directory has been supplied to a consumer.
+
+### `plug.consume(port, host, type, filepath, mypath, callback)`
+
+Consume from another plug. `type` must be either `file` or `directory`. `filepath` is the absolute filepath of the requested resource on the serving machine. `mypath` is the filepath to which the requested resource will be written on the requesting machine. The callback will be called once the resource has been consumed.
+
+### `plug.whitelist(filepath)`
+
+Whitelist a file or directory on your machine to be shared with requesting consumers. Whitelisting is not required if a plug has been instantiated with `!opts.strict`.
+
+### `plug.blacklist(filepath)`
+
+Disallow sharing a resource if the plug has been instantiated with `opts.strict`.
+
+### `plug.supplied`
+
+Read-only property indicating the number of files and directories supplied.
+
+### `plug.consumed`
+
+Read-only property indicating the number of files and directories consumed.
+
+### `plug.on('bytes-supplied', callback)`
+
+Emitted every time a buffer is about to be written to a consuming socket. The callback has the signature `callback(num)`. `num` is the number of bytes supplied so far.
+
+### `plug.on('bytes-consumed', callback)`
+
+Emitted every time a buffer is about to be consumed from a inbound socket. The callback has the signature `callback(num)`. `num` is the number of bytes consumed so far.
 
 ***
 
