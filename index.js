@@ -119,11 +119,11 @@ function consume (port, host, type, filepath, mypath, callback) {
 FilePlug.prototype.consume = consume
 
 FilePlug.prototype.whitelist = function whitelist (filepath) {
-  this._whitelist.add(filepath)
+  return this._whitelist.add(filepath)
 }
 
 FilePlug.prototype.blacklist = function blacklist (filepath) {
-  this._whitelist.delete(filepath)
+  return this._whitelist.delete(filepath)
 }
 
 module.exports = FilePlug
