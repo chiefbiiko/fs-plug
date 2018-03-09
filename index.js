@@ -5,6 +5,8 @@ var zlib = require('zlib')
 var tar = require('tar-fs')
 var pump = require('pump')
 
+// TODO: 2 conf obj, length-prefix stream, initially send dirpath opt with onlies
+
 function noop () {}
 
 function stat (entry, opts, cb) {
