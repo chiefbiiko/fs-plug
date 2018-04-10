@@ -24,6 +24,7 @@
     "tape": "^4.8.0"
   },
   "dependencies": {
+    "length-prefixed-stream": "^1.5.2",
     "tar-fs": "^1.16.0"
   }
 }
