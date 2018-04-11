@@ -5,8 +5,10 @@ var zlib = require('zlib')
 var tar = require('tar-fs')
 var pump = require('pump')
 var lpstream = require('length-prefixed-stream')
+var debug = require('debug')('fs-plug')
+var relDirChild = require('./../rel-dir-child')
 
-// TODO: 2 conf obj, length-prefix stream, initially send dirpath opt with onlies
+// TODO: send imports on diet -> write a module 4 that
 
 function noop () {}
 
@@ -14,8 +16,8 @@ function stat (entry, opts, cb) {
   opts.dereference ? fs.stat(entry, cb) : fs.lstat(entry, cb)
 }
 
-function FilePlug (opts, onconsumer) {
-  if (!(this instanceof FilePlug)) return new FilePlug(opts, onconsumer)
+function Plug (opts, onconsumer) {
+  if (!(this instanceof Plug)) return new Plug(opts, onconsumer)
   net.Server.call(this)
 
   if (typeof opts === 'function') {
@@ -36,126 +38,106 @@ function FilePlug (opts, onconsumer) {
 
   var self = this
 
-  this.on('connection', function (socket) {
-    var decoder = lpstream.decode()
-    pump(socket, decoder)
-    // socket.on('data', function (buf) {
-    decoder.on('data', function (buf) {
-      // var filepath = buf.toString()
+  self.on('connection', function (socket) {
+    var lpdecoder = lpstream.decode()
+    pump(socket, lpdecoder)
+    lpdecoder.on('data', function (buf) {
       var preflight
       try {
         preflight = JSON.parse(buf.toString())
       } catch (err) {
         return onconsumer(err)
       }
-
-      // refactor 2 allow
       if (self._opts.strict && !self._whitelist.has(preflight.path)) {
-        return onconsumer('illegal request 4 non-whitelisted resource')
+        return onconsumer(Error('request for non-whitelisted resource'))
       }
-
-      // stat(filepath, self._opts, function (err, stats) {
       stat(preflight.path, self._opts, function (err, stats) {
         if (err) return onconsumer(err)
-
         var readStream
         if (stats.isDirectory() && preflight.only) {
           readStream = tar.pack(preflight.path, { entries: preflight.only })
-        } else if (stats.isDirectory()) {
+        } else if (stats.isDirectory()) { // might be obsolete!??!
           readStream = tar.pack(preflight.path)
         } else if (stats.isFile()) {
           readStream = fs.createReadStream(preflight.path)
         } else {
-          return onconsumer('unsupported resource')
+          return onconsumer(Error('request for unsupported resource'))
         }
-
         var gzip = zlib.createGzip()
+        gzip.on('readable', function () {
+          self.emit('bytes-supplied', socket.bytesWritten)
+        })
         pump(readStream, gzip, socket, function (err) {
           if (err) return onconsumer(err)
           self._supplied++
           onconsumer(null, preflight.path)
         })
-
-        gzip.on('readable', function () {
-          self.emit('bytes-supplied', socket.bytesWritten)
-        })
-
       })
-
     })
   })
-
 }
 
-util.inherits(FilePlug, net.Server)
+util.inherits(Plug, net.Server)
 
-FilePlug.prototype.__defineGetter__('supplied', function () {
-  return this._supplied
-})
-
-FilePlug.prototype.__defineGetter__('consumed', function () {
-  return this._consumed
-})
-
-// function consume (port, host, type, filepath, mypath, callback) {
-function consume (conf, callback) {
-  if (!callback) callback = noop
+Plug.prototype.consume = function consume (conf, cb) {
+  if (!cb) cb = noop
   var self = this
-
-  // var socket = net.connect(port, host, function () {
   var socket = net.connect(conf.port, conf.host, function () {
-    var encoder = lpstream.encode()
-    pump(encoder, socket)
-    // socket.write(filepath, function () {
-    var preflight = JSON.stringify({
-      path: conf.filepath,
-      only: conf.type === 'file' ? null : conf.only
-    })
-    // encoder.write(conf.filepath, function () {
-    encoder.write(preflight, function () {
-
-      var target = conf.type === 'file' ? conf.mypath : conf.mypath + '.tar'
-      var writeStream =
-        // fs.createWriteStream(type === 'file' ? mypath : mypath + '.tar')
-        fs.createWriteStream(target)
-
+    var lpencoder = lpstream.encode()
+    pump(lpencoder, socket)
+    var preflight = { path: conf.remotePath, only: null }
+    if (conf.only) {
+      preflight.only = conf.only.map(function (abspath) {
+        return relDirChild(preflight.path, abspath)
+      })
+    }
+    lpencoder.write(JSON.stringify(preflight), function () {
+      var writeTarget, writeStream
+      if (conf.type === 'directory') writeTarget = conf.localPath + '.tar'
+      else writeTarget = conf.localPath
+      writeStream = fs.createWriteStream(writeTarget)
+      socket.on('readable', function () {
+        self.emit('bytes-consumed', socket.bytesRead)
+      })
       pump(socket, zlib.createGunzip(), writeStream, function (err) {
-        if (err) return callback(err)
+        debug('pumpd socket -> gunzip -> file::', err, writeTarget)
+        if (err) return cb(err)
         self._consumed++
         if (conf.type === 'file') {
-          callback(null, conf.mypath)
+          cb(null, conf.localPath)
         } else {
-          var tarStream = fs.createReadStream(conf.mypath + '.tar')
-          pump(tarStream, tar.extract(conf.mypath), function (err) {
-            if (err) return callback(err)
-            fs.unlink(conf.mypath + '.tar', function (err) {
-              if (err) return callback(err)
-              callback(null, conf.mypath)
+          var tarStream = fs.createReadStream(conf.localPath + '.tar')
+          pump(tarStream, tar.extract(conf.localPath), function (err) {
+            debug('pumpd tarstream -> tar.extract::', err, conf.localPath)
+            if (err) return cb(err)
+            fs.unlink(conf.localPath + '.tar', function (err) {
+              if (err) return cb(err)
+              cb(null, conf.localPath)
             })
           })
         }
       })
-
-      socket.on('readable', function () {
-        self.emit('bytes-consumed', socket.bytesRead)
-      })
-
       setTimeout(function () {
-        if (!socket.bytesRead) socket.destroy('consume timeout')
+        if (!socket.bytesRead) socket.destroy(Error('consume timeout'))
       }, self._opts.timeout)
-
     })
   })
 }
 
-FilePlug.prototype.consume = consume
-
-FilePlug.prototype.whitelist = function whitelist (filepath) {
+Plug.prototype.whitelist = function whitelist (filepath) {
   return this._whitelist.add(filepath)
 }
 
-FilePlug.prototype.blacklist = function blacklist (filepath) {
+Plug.prototype.blacklist = function blacklist (filepath) {
   return this._whitelist.delete(filepath)
 }
 
-module.exports = FilePlug
+Plug.prototype.__defineGetter__('supplied', function () {
+  return this._supplied
+})
+
+Plug.prototype.__defineGetter__('consumed', function () {
+  return this._consumed
+})
+
+module.exports = Plug

@@ -24,8 +24,8 @@ tape('file sharing', function (t) {
       port: 10000,
       host: 'localhost',
       type: 'file',
-      filepath: selfie,
-      mypath: dope
+      remotePath: selfie,
+      localPath: dope
     }
     // b.consume(10000, '127.0.0.1', 'file', selfie, dope, function (err) {
     b.consume(conf, function (err) {
@@ -48,8 +48,8 @@ tape('dir sharing', function (t) {
       port: 10000,
       host: 'localhost',
       type: 'directory',
-      filepath: stash,
-      mypath: dopedir
+      remotePath: stash,
+      localPath: dopedir
     }
     // b.consume(10000, '127.0.0.1', 'directory', stash, dopedir, function (err) {
     b.consume(conf, function (err) {
@@ -73,8 +73,8 @@ tape('exceptions', function (t) {
       port: 10000,
       host: 'localhost',
       type: 'file',
-      filepath: bad,
-      mypath: dope
+      remotePath: bad,
+      localPath: dope
     }
     // b.consume(10000, '127.0.0.1', 'file', bad, dope, function (err) {
     b.consume(conf, function (err) {
@@ -93,8 +93,8 @@ tape('in strict mode only whitelisted files are shared', function (t) {
       port: 10000,
       host: 'localhost',
       type: 'file',
-      filepath: selfie,
-      mypath: coke
+      remotePath: selfie,
+      localPath: coke
     }
     b.consume(conf, function (err) {
     // b.consume(10000, '127.0.0.1', 'file', selfie, coke, function (err) {
@@ -117,8 +117,8 @@ tape('events emit bytes written/read', function (t) {
       port: 10000,
       host: 'localhost',
       type: 'file',
-      filepath: selfie,
-      mypath: coke
+      remotePath: selfie,
+      localPath: coke
     }
     // b.consume(10000, '127.0.0.1', 'file', selfie, coke, function (err) {
     b.consume(conf, function (err) {
@@ -138,8 +138,8 @@ tape('only', function (t) {
       port: 10000,
       host: 'localhost',
       type: 'directory',
-      filepath: stash,
-      mypath: only,
+      remotePath: stash,
+      localPath: only,
       only: [ 'tape' ]
     }
     b.consume(conf, function (err) {
