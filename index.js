@@ -44,7 +44,7 @@ function Plug (opts, onconsumer) {
   self.on('connection', function onconnection (socket) {
     var lpdecoder = decode()
     pump(socket, lpdecoder)
-    lpdecoder.on('data', function oncedata (buf) {
+    lpdecoder.once('data', function oncedata (buf) {
       var preflight
       try {
         preflight = JSON.parse(buf.toString())
