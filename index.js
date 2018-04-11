@@ -9,7 +9,7 @@ var debug = require('debug')('fs-plug')
 //var relDirChild = require('./../rel-dir-child')
 var { isAbsolute, sep } = require('path')
 
-// TODO: send imports on diet -> write a module 4 that
+// TODO: send imports on diet, emit socket ids with those byte counts
 
 function noop () {}
 
