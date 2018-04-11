@@ -4,7 +4,7 @@
 
 ***
 
-A TCP server that listens for own filepaths and just streams out its indicated file or directory. Got a method to consume from such ports.
+A TCP server that listens for own filepaths and streams out its indicated file or directory. Got a method to consume from such peers. And a simple access control mechanism.
 
 ***
 
@@ -19,23 +19,29 @@ npm install --save fs-plug
 ## Usage
 
 ``` js
-var fsPlug = require('fs-plug')
+var plug = require('fs-plug')
 
-var a = fsPlug()
-var b = fsPlug()
+// alice and bob on two different computers
+var a = plug({ strict: true }) // default
+var b = plug()
 
-var file = __filename
-var copy = __filename + ' - copy'
-
-// allow file to be consumed by peers requesting it
-a.whitelist(file)
+// alice allows file to be consumed by peers requesting it
+a.whitelist(__filename)
 
 // listen for connections
-a.listen(10000, function () {
-  // consume from a
-  b.consume(10000, 'localhost', 'file', file, copy, function (err, mypath) {
+a.listen(10000, 'localhost', function () {
+  // bobs consume config
+  var conf = {
+    port: 10000,
+    host: 'localhost',
+    type: 'file',
+    remotePath: __filename,
+    localPath: __filename + '_copy'
+  }
+  // bob consuming from alice
+  b.consume(conf, function (err, localPath) {
     if (err) return console.error(err)
-    console.log('file saved as:', mypath)
+    console.log('file saved as:', localPath)
     a.close()
   })
 })
@@ -59,9 +65,10 @@ Create a new plug. Options default to:
 
 The callback has the signature `onconsumer(err, mypath)` and will be called every time a file or directory has been supplied to a consumer.
 
-### `plug.consume(port, host, type, filepath, mypath, callback)`
+### `plug.consume(conf, callback)`
 
-Consume from another plug. `type` must be either `file` or `directory`. `filepath` is the absolute filepath of the requested resource on the serving machine. `mypath` is the filepath to which the requested resource will be written on the requesting machine. The callback will be called once the resource has been consumed.
+Consume from another plug. Provide `conf.port` and `conf.host` to address the peer. `conf.type` must be either `'file'` or `'directory'`. `conf.remotePath` is the absolute filepath of the requested resource on the serving machine. `conf.localPath` is the filepath to which the requested resource will be written on the requesting machine. 
+The callback will be called once the resource has been consumed.
 
 ### `plug.whitelist(filepath)`
 
@@ -81,11 +88,11 @@ Read-only property indicating the number of files and directories consumed.
 
 ### `plug.on('bytes-supplied', callback)`
 
-Emitted every time a buffer is about to be written to a consuming socket. The callback has the signature `callback(num)`. `num` is the number of bytes supplied so far.
+Emitted every time a buffer is about to be written to a consuming socket. The callback has the signature `callback(num)`. `num` is the number of bytes supplied through an active socket.
 
 ### `plug.on('bytes-consumed', callback)`
 
-Emitted every time a buffer is about to be consumed from a inbound socket. The callback has the signature `callback(num)`. `num` is the number of bytes consumed so far.
+Emitted every time a buffer is about to be consumed from an inbound socket. The callback has the signature `callback(num)`. `num` is the number of bytes consumed so far through an active socket.
 
 ***
 
