@@ -27,7 +27,6 @@ tape('file sharing', function (t) {
       remotePath: selfie,
       localPath: dope
     }
-    // b.consume(10000, '127.0.0.1', 'file', selfie, dope, function (err) {
     b.consume(conf, function (err) {
       if (err) t.end(err)
       a.close()
@@ -51,7 +50,6 @@ tape('dir sharing', function (t) {
       remotePath: stash,
       localPath: dopedir
     }
-    // b.consume(10000, '127.0.0.1', 'directory', stash, dopedir, function (err) {
     b.consume(conf, function (err) {
       if (err) t.end(err)
       a.close()
@@ -76,7 +74,6 @@ tape('exceptions', function (t) {
       remotePath: bad,
       localPath: dope
     }
-    // b.consume(10000, '127.0.0.1', 'file', bad, dope, function (err) {
     b.consume(conf, function (err) {
       a.close()
       t.ok(err, 'expecting a consume timeout error')
@@ -97,7 +94,6 @@ tape('in strict mode only whitelisted files are shared', function (t) {
       localPath: coke
     }
     b.consume(conf, function (err) {
-    // b.consume(10000, '127.0.0.1', 'file', selfie, coke, function (err) {
       a.close()
       t.ok(err, 'expecting a consume timeout error')
     })
@@ -110,8 +106,12 @@ tape('events emit bytes written/read', function (t) {
   var b = fsPlug()
   var logA = []
   var logB = []
-  a.on('bytes-supplied', logA.push)
-  b.on('bytes-consumed', logB.push)
+  a.on('bytes-supplied', function (to, bytes) {
+    logA.push(bytes)
+  })
+  b.on('bytes-consumed', function (from, bytes) {
+    logB.push(bytes)
+  })
   a.listen(10000, '127.0.0.1', function () {
     var conf = {
       port: 10000,
@@ -120,7 +120,6 @@ tape('events emit bytes written/read', function (t) {
       remotePath: selfie,
       localPath: coke
     }
-    // b.consume(10000, '127.0.0.1', 'file', selfie, coke, function (err) {
     b.consume(conf, function (err) {
       if (err) t.end(err)
       a.close()
@@ -143,7 +142,6 @@ tape('only', function (t) {
       only: [ 'tape' ]
     }
     b.consume(conf, function (err) {
-    // b.consume(10000, '127.0.0.1', 'file', selfie, coke, function (err) {
       a.close()
       fs.readdir(only, function (err, entries) {
         if (err) t.end(err)

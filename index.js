@@ -7,8 +7,6 @@ var { encode, decode } = require('length-prefixed-stream')
 var { extract, pack } = require('tar-fs')
 var pump = require('pump')
 
-// TODO: send imports on diet, emit socket ids with those byte counts
-
 var ERR = {
   BLK_RES: Error('request for non-whitelisted resource'),
   UNS_RES: Error('request for unsupported resource'),
@@ -70,7 +68,8 @@ function Plug (opts, onconsumer) {
         }
         var gzip = createGzip()
         gzip.on('readable', function () {
-          self.emit('bytes-supplied', socket.bytesWritten)
+          var to = socket.remoteAddress + ':' + socket.remotePort
+          self.emit('bytes-supplied', to, socket.bytesWritten)
         })
         pump(readStream, gzip, socket, function (err) {
           if (err) return onconsumer(err)
@@ -103,7 +102,8 @@ Plug.prototype.consume = function consume (conf, cb) {
       else writeTarget = conf.localPath
       writeStream = createWriteStream(writeTarget)
       socket.on('readable', function () {
-        self.emit('bytes-consumed', socket.bytesRead)
+        var from = socket.remoteAddress + ':' + socket.remotePort
+        self.emit('bytes-consumed', from, socket.bytesRead)
       })
       pump(socket, createGunzip(), writeStream, function (err) {
         if (err) return cb(err)
