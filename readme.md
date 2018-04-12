@@ -67,8 +67,21 @@ The callback has the signature `onconsumer(err, mypath)` and will be called ever
 
 ### `plug.consume(conf, callback)`
 
-Consume from another plug. Provide `conf.port` and `conf.host` to address the peer. `conf.type` must be either `'file'` or `'directory'`. `conf.remotePath` is the absolute filepath of the requested resource on the serving machine. `conf.localPath` is the filepath to which the requested resource will be written on the requesting machine. 
-The callback will be called once the resource has been consumed.
+Consume from another plug.
+
+`conf` must be an object with the following properties:
+
+``` js
+{
+  port: number,
+  host: string,
+  type: string, // either 'file' or 'directory'
+  remotePath: string, // absolute filepath on serving machine
+  localPath: string // local filepath for consumed file
+}
+```
+
+The callback will be called like `callback(err, localPath)` once the resource has been consumed.
 
 ### `plug.whitelist(filepath)`
 
@@ -88,11 +101,11 @@ Read-only property indicating the number of files and directories consumed.
 
 ### `plug.on('bytes-supplied', callback)`
 
-Emitted every time a buffer is about to be written to a consuming socket. The callback has the signature `callback(num)`. `num` is the number of bytes supplied through an active socket.
+Emitted every time a buffer is about to be written to a consuming socket. The callback has the signature `callback(socketid, num)`. `num` is the number of bytes supplied through the socket indicated by `socketid`.
 
 ### `plug.on('bytes-consumed', callback)`
 
-Emitted every time a buffer is about to be consumed from an inbound socket. The callback has the signature `callback(num)`. `num` is the number of bytes consumed so far through an active socket.
+Emitted every time a buffer is about to be consumed from an inbound socket. The callback has the signature `callback(socketid, num)`. `num` is the number of bytes consumed so far through the socket indicated by `socketid`.
 
 ***
 
