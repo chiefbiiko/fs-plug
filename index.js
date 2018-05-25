@@ -7,6 +7,8 @@ var { encode, decode } = require('length-prefixed-stream')
 var { extract, pack } = require('tar-fs')
 var pump = require('pump')
 
+// TODO: strip length-prefixed-stream then check stream payload consistency
+
 var ERR = {
   BLK_RES: Error('request for non-whitelisted resource'),
   UNS_RES: Error('request for unsupported resource'),
