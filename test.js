@@ -10,7 +10,7 @@ var coke = selfie + ' yay!'
 var stash = path.join(__dirname, 'node_modules')
 var dopedir = stash + '_yea!'
 var bad = selfie.substr(0, 5)
-var only = stash + '_only'
+var only = stash + '_only_tape'
 
 tape.onFinish(function () {
   del.sync([ dope, coke, dopedir, only ])
@@ -139,12 +139,15 @@ tape('only', function (t) {
       type: 'directory',
       remotePath: stash,
       localPath: only,
-      only: [ 'tape' ]
+      only: [ './tape' ]
     }
     b.consume(conf, function (err) {
       a.close()
       fs.readdir(only, function (err, entries) {
         if (err) t.end(err)
+        entries = entries.filter(function (entry) {
+          return !entry.startsWith('.')
+        })
         var ok = entries.length === 1 && entries[0] === 'tape'
         t.ok(ok, 'should only contain tape')
       })

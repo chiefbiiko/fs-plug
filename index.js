@@ -44,9 +44,10 @@ function Plug (opts, onconsumer) {
   var self = this
 
   self.on('connection', function onconnection (socket) {
-    var lpdecoder = decode()
-    pump(socket, lpdecoder)
-    lpdecoder.once('data', function oncedata (buf) {
+    //var lpdecoder = decode()
+    //pump(socket, lpdecoder)
+    //lpdecoder.once('data', function oncedata (buf) {
+    socket.once('data', function oncedata (buf) {
       var preflight
       try {
         preflight = JSON.parse(buf.toString())
@@ -89,8 +90,8 @@ Plug.prototype.consume = function consume (conf, cb) {
   if (!cb) cb = noop
   var self = this
   var socket = connect(conf.port, conf.host, function onconnect () {
-    var lpencoder = encode()
-    pump(lpencoder, socket)
+    //var lpencoder = encode()
+    //pump(lpencoder, socket)
     var preflight = { path: conf.remotePath, only: null }
     if (conf.only) {
       preflight.only = conf.only.map(function (filepath) {
@@ -98,7 +99,8 @@ Plug.prototype.consume = function consume (conf, cb) {
         else return filepath.replace(preflight.path + sep, '')
       })
     }
-    lpencoder.write(JSON.stringify(preflight), function inflight () {
+    //lpencoder.write(JSON.stringify(preflight), function inflight () {
+    socket.write(JSON.stringify(preflight), function inflight () {
       var writeTarget, writeStream
       if (conf.type === 'directory') writeTarget = conf.localPath + '.tar'
       else writeTarget = conf.localPath
