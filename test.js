@@ -13,7 +13,7 @@ var bad = selfie.substr(0, 5)
 var only = stash + '_only_tape'
 
 tape.onFinish(function () {
-  del.sync([ dope, coke, dopedir, only ])
+  del.sync([ dope, coke, only ])
 })
 
 tape('file sharing', function (t) {
@@ -57,6 +57,7 @@ tape('dir sharing', function (t) {
       t.same(fs.readdirSync(stash), fs.readdirSync(dopedir), 'identical dirs')
       t.is(a.supplied, 1, 'a should have supplied 1 dir')
       t.is(b.consumed, 1, 'b should have consumed 1 dir')
+      del.sync([ dopedir ])
       t.end()
     })
   })
