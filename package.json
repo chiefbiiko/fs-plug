@@ -1,6 +1,6 @@
 {
   "name": "fs-plug",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "tcp server for simple file sharing",
   "main": "index.js",
   "scripts": {
@@ -20,11 +20,11 @@
   },
   "homepage": "https://github.com/chiefbiiko/fs-plug#readme",
   "devDependencies": {
-    "del": "^3.0.0",
     "tape": "^4.8.0"
   },
   "dependencies": {
-    "length-prefixed-stream": "^1.5.2",
+    "pump": "^3.0.0",
+    "rimraf": "^2.6.3",
     "tar-fs": "^1.16.0"
   }
 }

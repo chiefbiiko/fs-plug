@@ -1,6 +1,6 @@
 var fsPlug = require('.')
 
-// alice and bob on two different computers
+// alice and bob on two different computers in the same local network
 var a = fsPlug()
 var b = fsPlug()
 
@@ -22,5 +22,6 @@ a.listen(10000, function () {
     if (err) return console.error(err)
     console.log('file saved as:', localPath)
     a.close()
+    b.close()
   })
 })

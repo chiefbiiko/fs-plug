@@ -1,21 +1,21 @@
-var { createReadStream, createWriteStream, lstat, stat, unlink } = require('fs')
+var { createReadStream, createWriteStream, lstat, stat } = require('fs')
 var { connect, Server } = require('net')
 var { inherits } = require('util')
 var { createGzip, createGunzip } = require('zlib')
 var { isAbsolute, sep } = require('path')
-//var { encode, decode } = require('length-prefixed-stream')
 var { extract, pack } = require('tar-fs')
 var pump = require('pump')
+var rimraf = require('rimraf')
 
 var ERR = {
-  BLK_RES: Error('request for non-whitelisted resource'),
-  UNS_RES: Error('request for unsupported resource'),
+  BLACKLISTED_RESOURCE: Error('request for non-whitelisted resource'),
+  UNSUPPORTED_RESOURCE: Error('request for unsupported resource'),
   TIMEOUT: Error('consume timeout')
 }
 
 function noop () {}
 
-function chiefstat (entry, opts, cb) {
+function xstat (entry, opts, cb) {
   opts.dereference ? stat(entry, cb) : lstat(entry, cb)
 }
 
@@ -41,22 +41,26 @@ function Plug (opts, onconsumer) {
 
   var self = this
 
-  self.on('connection', function onconnection (socket) {
-    //var lpdecoder = decode()
-    //pump(socket, lpdecoder)
-    //lpdecoder.once('data', function oncedata (buf) {
-    socket.once('data', function oncedata (buf) {
+  self.on('connection', function (socket) {
+    socket.once('data', function (buf) {
       var preflight
       try {
         preflight = JSON.parse(buf.toString())
       } catch (err) {
         return onconsumer(err)
       }
+
       if (self._opts.strict && !self._whitelist.has(preflight.path)) {
-        return onconsumer(ERR.BLK_RES)
+        socket.destroy()
+        return onconsumer(ERR.BLACKLISTED_RESOURCE)
       }
-      chiefstat(preflight.path, self._opts, function onstat (err, stats) {
-        if (err) return onconsumer(err)
+
+      xstat(preflight.path, self._opts, function (err, stats) {
+        if (err) {
+          socket.destroy()
+          return onconsumer(err)
+        }
+
         var readStream
         if (stats.isDirectory() && preflight.only) {
           readStream = pack(preflight.path, { entries: preflight.only })
@@ -65,14 +69,10 @@ function Plug (opts, onconsumer) {
         } else if (stats.isFile()) {
           readStream = createReadStream(preflight.path)
         } else {
-          return onconsumer(ERR.UNS_RES)
+          return onconsumer(ERR.UNSUPPORTED_RESOURCE)
         }
-        var gzip = createGzip()
-        gzip.on('readable', function () {
-          var to = socket.remoteAddress + ':' + socket.remotePort
-          self.emit('bytes-supplied', to, socket.bytesWritten)
-        })
-        pump(readStream, gzip, socket, function (err) {
+
+        pump(readStream, createGzip(), socket, function (err) {
           if (err) return onconsumer(err)
           self._supplied++
           onconsumer(null, preflight.path)
@@ -84,65 +84,72 @@ function Plug (opts, onconsumer) {
 
 inherits(Plug, Server)
 
-Plug.prototype.consume = function consume (conf, cb) {
-  if (!cb) cb = noop
+Plug.prototype.consume = function (conf, cb) {
   var self = this
-  var socket = connect(conf.port, conf.host, function onconnect () {
-    //var lpencoder = encode()
-    //pump(lpencoder, socket)
-    var preflight = { path: conf.remotePath, only: null }
-    if (conf.only) {
-      preflight.only = conf.only.map(function (filepath) {
-        if (!isAbsolute(filepath)) return filepath
-        else return filepath.replace(preflight.path + sep, '')
-      })
-    }
-    //lpencoder.write(JSON.stringify(preflight), function inflight () {
-    socket.write(JSON.stringify(preflight), function inflight () {
-      var writeTarget, writeStream
+  var preflight = { path: conf.remotePath, only: null }
+
+  if (!cb) cb = noop
+
+  if (conf.only) {
+    preflight.only = conf.only.map(function (filepath) {
+      if (!isAbsolute(filepath)) return filepath
+      else return filepath.replace(preflight.path + sep, '')
+    })
+  }
+
+  var socket = connect(conf.port, conf.host, function () {
+    socket.write(JSON.stringify(preflight), function () {
+      var writeTarget
+      var writeStream
+
       if (conf.type === 'directory') writeTarget = conf.localPath + '.tar'
       else writeTarget = conf.localPath
+
       writeStream = createWriteStream(writeTarget)
-      socket.on('readable', function () {
-        var from = socket.remoteAddress + ':' + socket.remotePort
-        self.emit('bytes-consumed', from, socket.bytesRead)
-      })
-      pump(socket, createGunzip(), writeStream, function (err) {
-        if (err) return cb(err)
-        self._consumed++
-        if (conf.type === 'file') {
-          cb(null, conf.localPath)
-        } else {
-          var tarStream = createReadStream(conf.localPath + '.tar')
-          pump(tarStream, extract(conf.localPath), function (err) {
-            if (err) return cb(err)
-            unlink(conf.localPath + '.tar', function (err) {
+
+      socket.once('readable', function () {
+        pump(socket, createGunzip(), writeStream, function (err) {
+          if (err) return cb(err)
+          self._consumed++
+
+          if (conf.type === 'file') {
+            cb(null, conf.localPath)
+          } else {
+            var tarball = conf.localPath + '.tar'
+            pump(createReadStream(tarball), extract(conf.localPath), function (err) {
               if (err) return cb(err)
-              cb(null, conf.localPath)
+              rimraf(tarball, function (err) {
+                if (err) return cb(err)
+                cb(null, conf.localPath)
+              })
             })
-          })
-        }
+          }
+        })
+
+        setTimeout(function () {
+          if (!socket.bytesRead) {
+            socket.destroy(ERR.TIMEOUT)
+            rimraf(conf.localPath, noop)
+          }
+        }, self._opts.timeout)
       })
-      setTimeout(function () {
-        if (!socket.bytesRead) socket.destroy(ERR.TIMEOUT)
-      }, self._opts.timeout)
     })
   })
 }
 
-Plug.prototype.whitelist = function whitelist (filepath) {
+Plug.prototype.whitelist = function (filepath) {
   return this._whitelist.add(filepath)
 }
 
-Plug.prototype.blacklist = function blacklist (filepath) {
+Plug.prototype.blacklist = function (filepath) {
   return this._whitelist.delete(filepath)
 }
 
-Plug.prototype.__defineGetter__('supplied', function supplied () {
+Plug.prototype.__defineGetter__('supplied', function () {
   return this._supplied
 })
 
-Plug.prototype.__defineGetter__('consumed', function consumed () {
+Plug.prototype.__defineGetter__('consumed', function () {
   return this._consumed
 })
 
