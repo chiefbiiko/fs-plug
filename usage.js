@@ -15,7 +15,7 @@ a.listen(10000, function () {
     host: 'localhost',
     type: 'file',
     remotePath: __filename,
-    localPath: __filename + '_copy'
+    localPath: 'example'
   }
   // bob consuming from alice
   b.consume(conf, function (err, localPath) {

@@ -21,7 +21,10 @@ tape('file sharing', function (t) {
     }
 
     b.consume(conf, function (err) {
-      if (err) t.end(err)
+      if (err) {
+        a.close()
+        t.end(err)
+      }
       a.close()
 
       t.ok(existsSync(dest), 'file shared')
@@ -51,7 +54,10 @@ tape('dir sharing', function (t) {
     }
 
     b.consume(conf, function (err) {
-      if (err) t.end(err)
+      if (err) {
+        a.close()
+        t.end(err)
+      }
       a.close()
 
       t.ok(existsSync(dest), 'directory shared')
@@ -134,6 +140,10 @@ tape('only packing specific entries in a directory', function (t) {
     }
 
     b.consume(conf, function (err) {
+      if (err) {
+        a.close()
+        t.end(err)
+      }
       a.close()
 
       var entries = readdirSync(dest).filter(function (entry) {

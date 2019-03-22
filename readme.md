@@ -99,14 +99,6 @@ Read-only property indicating the number of files and directories supplied.
 
 Read-only property indicating the number of files and directories consumed.
 
-### `plug.on('bytes-supplied', callback)`
-
-Emitted every time a buffer is about to be written to a consuming socket. The callback has the signature `callback(socketid, num)`. `num` is the number of bytes supplied through the socket indicated by `socketid`.
-
-### `plug.on('bytes-consumed', callback)`
-
-Emitted every time a buffer is about to be consumed from an inbound socket. The callback has the signature `callback(socketid, num)`. `num` is the number of bytes consumed so far through the socket indicated by `socketid`.
-
 ***
 
 ## License
