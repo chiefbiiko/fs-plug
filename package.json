@@ -1,6 +1,6 @@
 {
   "name": "fs-plug",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "tcp server for simple file sharing",
   "main": "index.js",
   "scripts": {

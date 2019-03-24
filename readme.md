@@ -91,6 +91,14 @@ Whitelist a file or directory on your machine to be shared with requesting consu
 
 Disallow sharing a resource if the plug has been instantiated with `opts.checkWhitelist`.
 
+### `plug.checkWhitelist(bool)`
+
+Toggle requiring a whitelist check by passing a boolean.
+
+### `plug.setPassphrase(passphrase)`
+
+Set or reset the passphrase for authorizing inbound requests. `passphrase` msut be a `Buffer` or `string`.
+
 ### `plug.supplied`
 
 Read-only property indicating the number of files and directories supplied.

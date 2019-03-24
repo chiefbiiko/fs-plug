@@ -184,3 +184,103 @@ tape('only packing specific entries in a directory', function (t) {
     })
   })
 })
+
+tape('wrong passphrase', function (t) {
+  var orig = __filename
+  var dest = orig + '_copy'
+
+  var a = fsPlug({ passphrase: 'sesameopen' })
+  var b = fsPlug()
+
+  a.whitelist(orig)
+
+  a.listen(10000, '127.0.0.1', function () {
+    var conf = {
+      port: 10000,
+      host: 'localhost',
+      type: 'file',
+      remotePath: orig,
+      localPath: dest,
+      passphrase: 'forgot'
+    }
+
+    b.consume(conf, function (err) {
+      a.close()
+
+      t.ok(err, 'expecting an error')
+
+      t.end()
+    })
+  })
+})
+
+tape('correct passphrase', function (t) {
+  var orig = __filename
+  var dest = orig + '_copy'
+  
+  var passphrase = 'sesameopen'
+
+  var a = fsPlug({ passphrase })
+  var b = fsPlug()
+
+  a.whitelist(orig)
+
+  a.listen(10000, '127.0.0.1', function () {
+    var conf = {
+      port: 10000,
+      host: 'localhost',
+      type: 'file',
+      remotePath: orig,
+      localPath: dest,
+      passphrase
+    }
+
+    b.consume(conf, function (err) {
+      a.close()
+      if (err) t.end(err)
+
+      t.ok(existsSync(dest), 'file shared')
+      t.same(readFileSync(dest), readFileSync(orig), 'identical files')
+      t.is(a.supplied, 1, 'a has supplied 1 file')
+      t.is(b.consumed, 1, 'b has consumed 1 file')
+
+      rimraf(dest, t.end)
+    })
+  })
+})
+
+tape('resetting passphrase', function (t) {
+  var orig = __filename
+  var dest = orig + '_copy'
+  
+  var passphrase = 'sesameopen'
+
+  var a = fsPlug({ passphrase: 'typo' })
+  var b = fsPlug()
+
+  a.whitelist(orig)
+  a.setPassphrase(passphrase)
+
+  a.listen(10000, '127.0.0.1', function () {
+    var conf = {
+      port: 10000,
+      host: 'localhost',
+      type: 'file',
+      remotePath: orig,
+      localPath: dest,
+      passphrase
+    }
+
+    b.consume(conf, function (err) {
+      a.close()
+      if (err) t.end(err)
+
+      t.ok(existsSync(dest), 'file shared')
+      t.same(readFileSync(dest), readFileSync(orig), 'identical files')
+      t.is(a.supplied, 1, 'a has supplied 1 file')
+      t.is(b.consumed, 1, 'b has consumed 1 file')
+
+      rimraf(dest, t.end)
+    })
+  })
+})

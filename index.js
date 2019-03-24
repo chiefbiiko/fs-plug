@@ -35,7 +35,7 @@ function Plug (opts, onconsumer) {
   this._opts = opts
   this._opts.timeout = opts.timeout || 500
   this._opts.checkWhitelist = opts.checkWhitelist !== false
-  this._opts.passphrase = typeof opts.passphrase === 'string'
+  this._opts.passphrase = typeof opts.passphrase === 'string' || Buffer.isBuffer(opts.passphrase)
     ? Buffer.from(opts.passphrase) : null
 
   this._supplied = 0
@@ -48,18 +48,19 @@ function Plug (opts, onconsumer) {
     socket.once('data', function (buf) {
       var preflight
       try {
-        preflight = JSON.parse(buf.toString())
+        preflight = JSON.parse(buf)
       } catch (err) {
+        socket.destroy()
         return onconsumer(err)
       }
 
-      if (self._opts.passphrase && 
-          !timingSafeEqual(
-            Buffer.from(preflight.passphrase), 
-            self._opts.passphrase
-          )) {
-        socket.destroy()
-        return onconsumer(ERR.UNAUTHORIZED)
+      if (self._opts.passphrase) {
+        var pass = Buffer.from(preflight.passphrase)
+        if (pass.length !== self._opts.passphrase.length ||
+            !timingSafeEqual(pass, self._opts.passphrase)) {
+          socket.destroy()
+          return onconsumer(ERR.UNAUTHORIZED)  
+        }
       }
 
       if (self._opts.checkWhitelist && !self._whitelist.has(preflight.path)) {
@@ -152,7 +153,9 @@ Plug.prototype.checkWhitelist = function (v) {
 }
 
 Plug.prototype.setPassphrase = function (passphrase) {
-  this._opts.passphrase = passphrase
+  if (typeof passphrase === 'string' || Buffer.isBuffer(passphrase)) {
+    this._opts.passphrase = Buffer.from(passphrase)  
+  }
 }
 
 Plug.prototype.__defineGetter__('supplied', function () {
