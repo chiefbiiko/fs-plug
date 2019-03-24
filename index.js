@@ -36,6 +36,7 @@ function Plug(opts, onconsumer) {
   this._opts = opts
   this._opts.dereference = !!opts.dereference
   this._opts.timeout = typeof opts.timeout === "number" ? opts.timeout : 500
+  this._opts.interval = typeof opts.interval === "number" ? opts.interval : 250
   this._opts.enforceWhitelist = opts.enforceWhitelist !== false
   this._opts.passphrase =
     typeof opts.passphrase === "string" || Buffer.isBuffer(opts.passphrase)
@@ -46,25 +47,25 @@ function Plug(opts, onconsumer) {
   this._consumed = 0
   this._whitelist = new Set(opts.whitelist)
 
-  Object.defineProperty(this, "supplied", {
-    get() {
-      return this._supplied
-    },
-    set(count) {
-      this._supplied = count
-    }
-  })
-
-  Object.defineProperty(this, "consumed", {
-    get() {
-      return this._consumed
-    },
-    set(count) {
-      this._consumed = count
-    }
-  })
-
   var self = this
+
+  Object.defineProperty(self, "supplied", {
+    get() {
+      return self._supplied
+    },
+    set(count) {
+      self._supplied = count
+    }
+  })
+
+  Object.defineProperty(self, "consumed", {
+    get() {
+      return self._consumed
+    },
+    set(count) {
+      self._consumed = count
+    }
+  })
 
   self.on("connection", function(socket) {
     socket.once("data", function(buf) {
@@ -119,7 +120,7 @@ function Plug(opts, onconsumer) {
 
         var interval = setInterval(function() {
           self.emit("bytes-supplied", socket.bytesWritten)
-        }, 250)
+        }, self._opts.interval)
 
         pump(readStream, createGzip(), socket, function(err) {
           clearInterval(interval)
@@ -157,7 +158,7 @@ Plug.prototype.consume = function(conf, cb) {
         socket.once("readable", function() {
           var interval = setInterval(function() {
             self.emit("bytes-consumed", dump.bytesWritten)
-          }, 250)
+          }, self._opts.interval)
 
           pump(socket, createGunzip(), dump, function(err) {
             clearInterval(interval)

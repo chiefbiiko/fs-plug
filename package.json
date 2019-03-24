@@ -1,6 +1,6 @@
 {
   "name": "fs-plug",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "tcp server for simple file sharing",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,8 @@
     "url": "git+https://github.com/chiefbiiko/fs-plug.git"
   },
   "keywords": [
-    "filesharing"
+    "filesharing",
+    "tcp"
   ],
   "author": "Noah Anabiik Schwarz",
   "license": "MIT",

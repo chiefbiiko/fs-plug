@@ -63,6 +63,7 @@ Create a new plug. Options default to:
   timeout: 500 // max number of ms to wait for initial bytes when consuming
   passphrase: undefined // if buffer or string require this passphrase for every request
   whitelist: undefined // string[] seed the plug's whitelist with these file paths
+  interval: 250 // emit interval for the bytes-supplied and bytes-consumed events
 }
 ```
 
