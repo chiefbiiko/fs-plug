@@ -42,6 +42,24 @@ function Plug (opts, onconsumer) {
   this._consumed = 0
   this._whitelist = new Set()
 
+  Object.defineProperty(this, 'supplied', {
+    get () {
+      return this._supplied
+    },
+    set (count) {
+      this._supplied = count
+    }
+  })
+  
+  Object.defineProperty(this, 'consumed', {
+    get () {
+      return this._consumed
+    },
+    set (count) {
+      this._consumed = count
+    }
+  })
+
   var self = this
 
   self.on('connection', function (socket) {
@@ -157,13 +175,5 @@ Plug.prototype.setPassphrase = function (passphrase) {
     this._opts.passphrase = Buffer.from(passphrase)  
   }
 }
-
-Plug.prototype.__defineGetter__('supplied', function () {
-  return this._supplied
-})
-
-Plug.prototype.__defineGetter__('consumed', function () {
-  return this._consumed
-})
 
 module.exports = Plug

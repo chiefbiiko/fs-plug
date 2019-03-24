@@ -284,3 +284,38 @@ tape('resetting passphrase', function (t) {
     })
   })
 })
+
+tape('resetting supplied, consumed count', function (t) {
+  var orig = __filename
+  var dest = orig + '_copy'
+
+  var a = fsPlug()
+  var b = fsPlug()
+
+  a.whitelist(orig)
+
+  a.listen(10000, '127.0.0.1', function () {
+    var conf = {
+      port: 10000,
+      host: 'localhost',
+      type: 'file',
+      remotePath: orig,
+      localPath: dest
+    }
+
+    b.consume(conf, function (err) {
+      a.close()
+      if (err) t.end(err)
+
+      t.ok(existsSync(dest), 'file shared')
+      t.same(readFileSync(dest), readFileSync(orig), 'identical files')
+      t.is(a.supplied, 1, 'a has supplied 1 file')
+      t.is(b.consumed, 1, 'b has consumed 1 file')
+      a.supplied = b.consumed = 0
+      t.is(a.supplied, 0, 'reset a.supplied count')
+      t.is(b.consumed, 0, 'reset b.consumed count')
+
+      rimraf(dest, t.end)
+    })
+  })
+})
