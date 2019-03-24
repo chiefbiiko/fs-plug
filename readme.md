@@ -22,7 +22,7 @@ npm install --save fs-plug
 var plug = require('fs-plug')
 
 // alice and bob on two different computers
-var a = plug({ checkWhitelist: true }) // default
+var a = plug({ enforceWhitelist: true }) // default
 var b = plug()
 
 // alice allows file to be consumed by peers requesting it
@@ -58,9 +58,10 @@ Create a new plug. Options default to:
 ``` js
 {
   dereference: false, // follow symlinks when looking up requested files?
-  checkWhitelist: true, // only serve files if they have been whitelisted before?
+  enforceWhitelist: true, // only serve files if they have been whitelisted before?
   timeout: 500 // max number of ms to wait for initial bytes when consuming
-  passphrase: string // if truthy require this passphrase for every request
+  passphrase: undefined // if buffer or string require this passphrase for every request
+  whitelist: undefined // string[] seed the plug's whitelist with these file paths
 }
 ```
 
@@ -85,15 +86,19 @@ Consume from another plug.
 
 ### `plug.whitelist(filepath)`
 
-Whitelist a file or directory on your machine to be shared with requesting consumers. Whitelisting is not required if a plug has been instantiated with `!opts.checkWhitelist`.
+Whitelist a file or directory on your machine to be shared with requesting consumers. Whitelisting is not required if a plug has been instantiated with `!opts.enforceWhitelist`.
 
 ### `plug.blacklist(filepath)`
 
-Disallow sharing a resource if the plug has been instantiated with `opts.checkWhitelist`.
+Disallow sharing a resource if the plug has been instantiated with `opts.enforceWhitelist`.
 
-### `plug.checkWhitelist(bool)`
+### `plug.enforceWhitelist(bool)`
 
 Toggle requiring a whitelist check by passing a boolean.
+
+### `plug.clearWhitelist()`
+
+Clear the plug's whitelist.
 
 ### `plug.setPassphrase(passphrase)`
 

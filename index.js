@@ -33,14 +33,15 @@ function Plug (opts, onconsumer) {
   if (!onconsumer) onconsumer = noop
 
   this._opts = opts
-  this._opts.timeout = opts.timeout || 500
-  this._opts.checkWhitelist = opts.checkWhitelist !== false
+  this._opts.dereference = !!opts.dereference
+  this._opts.timeout = typeof opts.timeout === 'number' ? opts.timeout : 500
+  this._opts.enforceWhitelist = opts.enforceWhitelist !== false
   this._opts.passphrase = typeof opts.passphrase === 'string' || Buffer.isBuffer(opts.passphrase)
     ? Buffer.from(opts.passphrase) : null
 
   this._supplied = 0
   this._consumed = 0
-  this._whitelist = new Set()
+  this._whitelist = new Set(opts.whitelist)
 
   Object.defineProperty(this, 'supplied', {
     get () {
@@ -81,7 +82,7 @@ function Plug (opts, onconsumer) {
         }
       }
 
-      if (self._opts.checkWhitelist && !self._whitelist.has(preflight.path)) {
+      if (self._opts.enforceWhitelist && !self._whitelist.has(preflight.path)) {
         socket.destroy()
         return onconsumer(ERR.BLACKLISTED_RESOURCE)
       }
@@ -166,8 +167,12 @@ Plug.prototype.blacklist = function (filepath) {
   return this._whitelist.delete(filepath)
 }
 
-Plug.prototype.checkWhitelist = function (v) {
-  this._opts.checkWhitelist = !!v
+Plug.prototype.enforceWhitelist = function (v) {
+  this._opts.enforceWhitelist = !!v
+}
+
+Plug.prototype.clearWhitelist = function () {
+  this._whitelist.clear()
 }
 
 Plug.prototype.setPassphrase = function (passphrase) {

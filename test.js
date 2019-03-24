@@ -8,7 +8,7 @@ tape('file sharing', function (t) {
   var orig = __filename
   var dest = orig + '_copy'
 
-  var a = fsPlug({ checkWhitelist: false })
+  var a = fsPlug({ enforceWhitelist: false })
   var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
@@ -38,7 +38,7 @@ tape('dir sharing', function (t) {
   var orig = join(__dirname, 'node_modules')
   var dest = orig + '_copy'
 
-  var a = fsPlug({ checkWhitelist: false })
+  var a = fsPlug({ enforceWhitelist: false })
   var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
@@ -68,7 +68,7 @@ tape('consume error on wrong remotePath', function (t) {
   var orig = 'non_existing_file'
   var dest = orig + '_copy'
 
-  var a = fsPlug({ checkWhitelist: false })
+  var a = fsPlug({ enforceWhitelist: false })
   var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
@@ -90,11 +90,11 @@ tape('consume error on wrong remotePath', function (t) {
   })
 })
 
-tape('in checkWhitelist mode only whitelisted files are shared', function (t) {
+tape('in enforceWhitelist mode only whitelisted files are shared', function (t) {
   var orig = __filename
   var dest = orig + '_copy'
 
-  var a = fsPlug({ checkWhitelist: true })
+  var a = fsPlug({ enforceWhitelist: true })
   var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
@@ -120,7 +120,7 @@ tape('emits bytes-supplied, bytes-consumed', function (t) {
   var orig = __filename
   var dest = orig + '_copy'
 
-  var a = fsPlug({ checkWhitelist: false })
+  var a = fsPlug({ enforceWhitelist: false })
   var b = fsPlug()
 
   var logA = []
@@ -157,7 +157,7 @@ tape('only packing specific entries in a directory', function (t) {
   var orig = join(__dirname, 'node_modules')
   var dest = orig + '_copy'
 
-  var a = fsPlug({ checkWhitelist: false })
+  var a = fsPlug({ enforceWhitelist: false })
   var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
@@ -311,6 +311,7 @@ tape('resetting supplied, consumed count', function (t) {
       t.same(readFileSync(dest), readFileSync(orig), 'identical files')
       t.is(a.supplied, 1, 'a has supplied 1 file')
       t.is(b.consumed, 1, 'b has consumed 1 file')
+
       a.supplied = b.consumed = 0
       t.is(a.supplied, 0, 'reset a.supplied count')
       t.is(b.consumed, 0, 'reset b.consumed count')
@@ -318,4 +319,18 @@ tape('resetting supplied, consumed count', function (t) {
       rimraf(dest, t.end)
     })
   })
+})
+
+tape('clearing the whitelist', function (t) {
+  var orig = __filename
+
+  var a = fsPlug()
+
+  a.whitelist(orig)
+
+  t.is(a._whitelist.size, 1, '1 whitelisted file for alice')
+  a.clearWhitelist()
+  t.is(a._whitelist.size, 0, '0 whitelisted files for alice')
+  
+  t.end()
 })
