@@ -159,6 +159,7 @@ Plug.prototype.consume = function(conf, cb) {
 
           setTimeout(function() {
             if (!socket.bytesRead) {
+              clearInterval(interval)
               socket.destroy(ERR.TIMEOUT)
               rimraf(conf.localPath, noop)
             }
