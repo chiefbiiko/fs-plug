@@ -51,7 +51,7 @@ a.listen(10000, 'localhost', function () {
 
 ## API
 
-### `var plug = fsPlug([opts][, onconsumer])`
+### `var plug = fsPlug([opts][, onconsumer(err, mypath)])`
 
 Create a new plug. Options default to:
 
@@ -63,9 +63,9 @@ Create a new plug. Options default to:
 }
 ```
 
-The callback has the signature `onconsumer(err, mypath)` and will be called every time a file or directory has been supplied to a consumer.
+`onconsumer` will be called every time a file or directory has been supplied to a consumer or in case of an error during that process.
 
-### `plug.consume(conf, callback)`
+### `plug.consume(conf, callback(err, localPath))`
 
 Consume from another plug.
 
@@ -80,8 +80,6 @@ Consume from another plug.
   localPath: string // local filepath for consumed file
 }
 ```
-
-The callback will be called like `callback(err, localPath)` once the resource has been consumed.
 
 ### `plug.whitelist(filepath)`
 
@@ -98,6 +96,14 @@ Read-only property indicating the number of files and directories supplied.
 ### `plug.consumed`
 
 Read-only property indicating the number of files and directories consumed.
+
+### `plug.on('bytes-supplied', callback(socketid, num))`
+
+Emitted while writing to a socket. `num` is the number of bytes supplied through the socket indicated by `socketid`.
+
+### `plug.on('bytes-consumed', callback(socketid, num))`
+
+Emitted while consuming from a socket. `num` is the number of bytes consumed so far through the socket indicated by `socketid`.
 
 ***
 
