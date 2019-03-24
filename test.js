@@ -83,7 +83,7 @@ tape("consume error on wrong remotePath", function(t) {
     b.consume(conf, function(err) {
       a.close()
 
-      t.ok(err, "expecting a consume timeout error")
+      t.ok(err, "expecting a null error")
 
       t.end()
     })

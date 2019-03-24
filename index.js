@@ -11,7 +11,8 @@ var ERR = {
   BLACKLISTED_RESOURCE: Error("request for non-whitelisted resource"),
   UNSUPPORTED_RESOURCE: Error("request for unsupported resource"),
   UNAUTHORIZED: Error("unathorized access attempt"),
-  TIMEOUT: Error("consume timeout")
+  TIMEOUT: Error("consume timeout"),
+  NULL: Error("zero bytes consumed")
 }
 
 function noop() {}
@@ -67,15 +68,19 @@ function Plug(opts, onconsumer) {
 
   self.on("connection", function(socket) {
     socket.once("data", function(buf) {
-      var preflight
       try {
-        preflight = JSON.parse(buf)
+        var preflight = JSON.parse(buf)
       } catch (err) {
         socket.destroy()
         return onconsumer(err)
       }
 
       if (self._opts.passphrase) {
+        if (typeof preflight.passphrase !== 'string') {
+          socket.destroy()
+          return onconsumer(ERR.UNAUTHORIZED)
+        }
+        
         var pass = Buffer.from(preflight.passphrase)
         if (
           pass.length !== self._opts.passphrase.length ||
@@ -153,6 +158,7 @@ Plug.prototype.consume = function(conf, cb) {
           pump(socket, createGunzip(), dump, function(err) {
             clearInterval(interval)
             if (err) return cb(err)
+            if (!socket.bytesRead) return cb(ERR.NULL)
             self._consumed++
             cb(null, conf.localPath)
           })
