@@ -1,11 +1,11 @@
 var { createReadStream, createWriteStream, lstat, stat } = require("fs")
+var { createGzip, createGunzip } = require("zlib")
+var { timingSafeEqual } = require("crypto")
 var { connect, Server } = require("net")
 var { inherits } = require("util")
-var { createGzip, createGunzip } = require("zlib")
 var { extract, pack } = require("tar-fs")
 var pump = require("pump")
 var rimraf = require("rimraf")
-var timingSafeEqual = require("crypto").timingSafeEqual
 
 var ERR = {
   BLACKLISTED_RESOURCE: Error("request for non-whitelisted resource"),
@@ -76,15 +76,19 @@ function Plug(opts, onconsumer) {
       }
 
       if (self._opts.passphrase) {
-        if (typeof preflight.passphrase !== 'string') {
+        if (
+          typeof preflight.passphrase !== "string" ||
+          preflight.passphrase.length !== self._opts.passphrase.length
+        ) {
           socket.destroy()
           return onconsumer(ERR.UNAUTHORIZED)
         }
-        
-        var pass = Buffer.from(preflight.passphrase)
+
         if (
-          pass.length !== self._opts.passphrase.length ||
-          !timingSafeEqual(pass, self._opts.passphrase)
+          !timingSafeEqual(
+            Buffer.from(preflight.passphrase),
+            self._opts.passphrase
+          )
         ) {
           socket.destroy()
           return onconsumer(ERR.UNAUTHORIZED)
