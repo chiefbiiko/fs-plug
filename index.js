@@ -5,10 +5,12 @@ var { createGzip, createGunzip } = require('zlib')
 var { extract, pack } = require('tar-fs')
 var pump = require('pump')
 var rimraf = require('rimraf')
+var timingSafeEqual = require('crypto').timingSafeEqual
 
 var ERR = {
   BLACKLISTED_RESOURCE: Error('request for non-whitelisted resource'),
   UNSUPPORTED_RESOURCE: Error('request for unsupported resource'),
+  UNAUTHORIZED: Error('unathorized access attempt'),
   TIMEOUT: Error('consume timeout')
 }
 
@@ -32,7 +34,9 @@ function Plug (opts, onconsumer) {
 
   this._opts = opts
   this._opts.timeout = opts.timeout || 500
-  this._opts.strict = opts.strict !== false
+  this._opts.checkWhitelist = opts.checkWhitelist !== false
+  this._opts.passphrase = typeof opts.passphrase === 'string'
+    ? Buffer.from(opts.passphrase) : null
 
   this._supplied = 0
   this._consumed = 0
@@ -49,7 +53,16 @@ function Plug (opts, onconsumer) {
         return onconsumer(err)
       }
 
-      if (self._opts.strict && !self._whitelist.has(preflight.path)) {
+      if (self._opts.passphrase && 
+          !timingSafeEqual(
+            Buffer.from(preflight.passphrase), 
+            self._opts.passphrase
+          )) {
+        socket.destroy()
+        return onconsumer(ERR.UNAUTHORIZED)
+      }
+
+      if (self._opts.checkWhitelist && !self._whitelist.has(preflight.path)) {
         socket.destroy()
         return onconsumer(ERR.BLACKLISTED_RESOURCE)
       }
@@ -90,7 +103,11 @@ inherits(Plug, Server)
 
 Plug.prototype.consume = function (conf, cb) {
   var self = this
-  var preflight = { path: conf.remotePath, only: conf.only }
+  var preflight = {
+    path: conf.remotePath,
+    only: conf.only,
+    passphrase: conf.passphrase
+  }
 
   if (!cb) cb = noop
 
@@ -128,6 +145,14 @@ Plug.prototype.whitelist = function (filepath) {
 
 Plug.prototype.blacklist = function (filepath) {
   return this._whitelist.delete(filepath)
+}
+
+Plug.prototype.checkWhitelist = function (v) {
+  this._opts.checkWhitelist = !!v
+}
+
+Plug.prototype.setPassphrase = function (passphrase) {
+  this._opts.passphrase = passphrase
 }
 
 Plug.prototype.__defineGetter__('supplied', function () {

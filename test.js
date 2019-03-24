@@ -8,7 +8,7 @@ tape('file sharing', function (t) {
   var orig = __filename
   var dest = orig + '_copy'
 
-  var a = fsPlug({ strict: false })
+  var a = fsPlug({ checkWhitelist: false })
   var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
@@ -38,7 +38,7 @@ tape('dir sharing', function (t) {
   var orig = join(__dirname, 'node_modules')
   var dest = orig + '_copy'
 
-  var a = fsPlug({ strict: false })
+  var a = fsPlug({ checkWhitelist: false })
   var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
@@ -68,7 +68,7 @@ tape('consume error on wrong remotePath', function (t) {
   var orig = 'non_existing_file'
   var dest = orig + '_copy'
 
-  var a = fsPlug({ strict: false })
+  var a = fsPlug({ checkWhitelist: false })
   var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
@@ -90,11 +90,11 @@ tape('consume error on wrong remotePath', function (t) {
   })
 })
 
-tape('in strict mode only whitelisted files are shared', function (t) {
+tape('in checkWhitelist mode only whitelisted files are shared', function (t) {
   var orig = __filename
   var dest = orig + '_copy'
 
-  var a = fsPlug({ strict: true })
+  var a = fsPlug({ checkWhitelist: true })
   var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
@@ -120,7 +120,7 @@ tape('emits bytes-supplied, bytes-consumed', function (t) {
   var orig = __filename
   var dest = orig + '_copy'
 
-  var a = fsPlug({ strict: false })
+  var a = fsPlug({ checkWhitelist: false })
   var b = fsPlug()
 
   var logA = []
@@ -157,7 +157,7 @@ tape('only packing specific entries in a directory', function (t) {
   var orig = join(__dirname, 'node_modules')
   var dest = orig + '_copy'
 
-  var a = fsPlug({ strict: false })
+  var a = fsPlug({ checkWhitelist: false })
   var b = fsPlug()
 
   a.listen(10000, '127.0.0.1', function () {
