@@ -21,16 +21,13 @@ tape('file sharing', function (t) {
     }
 
     b.consume(conf, function (err) {
-      if (err) {
-        a.close()
-        t.end(err)
-      }
       a.close()
+      if (err) t.end(err)
 
       t.ok(existsSync(dest), 'file shared')
       t.same(readFileSync(dest), readFileSync(orig), 'identical files')
-      t.is(a.supplied, 1, 'a should have supplied 1 file')
-      t.is(b.consumed, 1, 'b should have consumed 1 file')
+      t.is(a.supplied, 1, 'a has supplied 1 file')
+      t.is(b.consumed, 1, 'b has consumed 1 file')
 
       rimraf(dest, t.end)
     })
@@ -54,16 +51,13 @@ tape('dir sharing', function (t) {
     }
 
     b.consume(conf, function (err) {
-      if (err) {
-        a.close()
-        t.end(err)
-      }
       a.close()
+      if (err) t.end(err)
 
       t.ok(existsSync(dest), 'directory shared')
       t.same(readdirSync(dest), readdirSync(orig), 'identical dirs')
-      t.is(a.supplied, 1, 'a should have supplied 1 dir')
-      t.is(b.consumed, 1, 'b should have consumed 1 dir')
+      t.is(a.supplied, 1, 'a has supplied 1 dir')
+      t.is(b.consumed, 1, 'b has consumed 1 dir')
 
       rimraf(dest, t.end)
     })
@@ -122,6 +116,43 @@ tape('in strict mode only whitelisted files are shared', function (t) {
   })
 })
 
+tape('emits bytes-supplied, bytes-consumed', function (t) {
+  var orig = __filename
+  var dest = orig + '_copy'
+
+  var a = fsPlug({ strict: false })
+  var b = fsPlug()
+
+  var logA = []
+  var logB = []
+
+  a.on('bytes-supplied', function (to, bytes) {
+    logA.push(bytes)
+  })
+  b.on('bytes-consumed', function (from, bytes) {
+    logB.push(bytes)
+  })
+
+  a.listen(10000, '127.0.0.1', function () {
+    var conf = {
+      port: 10000,
+      host: 'localhost',
+      type: 'file',
+      remotePath: orig,
+      localPath: dest
+    }
+
+    b.consume(conf, function (err) {
+      a.close()
+      if (err) t.end(err)
+      
+      t.same(logA, logB, 'written and read num bytes are the same')
+      
+      rimraf(dest, t.end)
+    })
+  })
+})
+
 tape('only packing specific entries in a directory', function (t) {
   var orig = join(__dirname, 'node_modules')
   var dest = orig + '_copy'
@@ -140,11 +171,8 @@ tape('only packing specific entries in a directory', function (t) {
     }
 
     b.consume(conf, function (err) {
-      if (err) {
-        a.close()
-        t.end(err)
-      }
       a.close()
+      if (err) t.end(err)
 
       var entries = readdirSync(dest).filter(function (entry) {
         return !entry.startsWith('.')

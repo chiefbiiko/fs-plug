@@ -2,7 +2,6 @@ var { createReadStream, createWriteStream, lstat, stat } = require('fs')
 var { connect, Server } = require('net')
 var { inherits } = require('util')
 var { createGzip, createGunzip } = require('zlib')
-var { isAbsolute, sep } = require('path')
 var { extract, pack } = require('tar-fs')
 var pump = require('pump')
 var rimraf = require('rimraf')
@@ -72,7 +71,12 @@ function Plug (opts, onconsumer) {
           return onconsumer(ERR.UNSUPPORTED_RESOURCE)
         }
 
+        var interval = setInterval(function () {
+          self.emit('bytes-supplied', socket.bytesWritten)
+        }, 250)
+
         pump(readStream, createGzip(), socket, function (err) {
+          clearInterval(interval)
           if (err) return onconsumer(err)
           self._supplied++
           onconsumer(null, preflight.path)
@@ -86,44 +90,25 @@ inherits(Plug, Server)
 
 Plug.prototype.consume = function (conf, cb) {
   var self = this
-  var preflight = { path: conf.remotePath, only: null }
+  var preflight = { path: conf.remotePath, only: conf.only }
 
   if (!cb) cb = noop
 
-  if (conf.only) {
-    preflight.only = conf.only.map(function (filepath) {
-      if (!isAbsolute(filepath)) return filepath
-      else return filepath.replace(preflight.path + sep, '')
-    })
-  }
-
   var socket = connect(conf.port, conf.host, function () {
     socket.write(JSON.stringify(preflight), function () {
-      var writeTarget
-      var writeStream
-
-      if (conf.type === 'directory') writeTarget = conf.localPath + '.tar'
-      else writeTarget = conf.localPath
-
-      writeStream = createWriteStream(writeTarget)
+      var dump = conf.type === 'file'
+        ? createWriteStream(conf.localPath) : extract(conf.localPath)
 
       socket.once('readable', function () {
-        pump(socket, createGunzip(), writeStream, function (err) {
+        var interval = setInterval(function () {
+          self.emit('bytes-consumed', dump.bytesWritten)
+        }, 250)
+
+        pump(socket, createGunzip(), dump, function (err) {
+          clearInterval(interval)
           if (err) return cb(err)
           self._consumed++
-
-          if (conf.type === 'file') {
-            cb(null, conf.localPath)
-          } else {
-            var tarball = conf.localPath + '.tar'
-            pump(createReadStream(tarball), extract(conf.localPath), function (err) {
-              if (err) return cb(err)
-              rimraf(tarball, function (err) {
-                if (err) return cb(err)
-                cb(null, conf.localPath)
-              })
-            })
-          }
+          cb(null, conf.localPath)
         })
 
         setTimeout(function () {
