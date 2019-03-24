@@ -1,124 +1,124 @@
-var { existsSync, readFileSync, readdirSync } = require('fs')
-var { join } = require('path')
-var tape = require('tape')
-var fsPlug = require('./index')
-var rimraf = require('rimraf')
+var { existsSync, readFileSync, readdirSync } = require("fs")
+var { join } = require("path")
+var tape = require("tape")
+var fsPlug = require("./index")
+var rimraf = require("rimraf")
 
-tape('file sharing', function (t) {
+tape("file sharing", function(t) {
   var orig = __filename
-  var dest = orig + '_copy'
+  var dest = orig + "_copy"
 
   var a = fsPlug({ enforceWhitelist: false })
   var b = fsPlug()
 
-  a.listen(10000, '127.0.0.1', function () {
+  a.listen(10000, "127.0.0.1", function() {
     var conf = {
       port: 10000,
-      host: 'localhost',
-      type: 'file',
+      host: "localhost",
+      type: "file",
       remotePath: orig,
       localPath: dest
     }
 
-    b.consume(conf, function (err) {
+    b.consume(conf, function(err) {
       a.close()
       if (err) t.end(err)
 
-      t.ok(existsSync(dest), 'file shared')
-      t.same(readFileSync(dest), readFileSync(orig), 'identical files')
-      t.is(a.supplied, 1, 'a has supplied 1 file')
-      t.is(b.consumed, 1, 'b has consumed 1 file')
+      t.ok(existsSync(dest), "file shared")
+      t.same(readFileSync(dest), readFileSync(orig), "identical files")
+      t.is(a.supplied, 1, "a has supplied 1 file")
+      t.is(b.consumed, 1, "b has consumed 1 file")
 
       rimraf(dest, t.end)
     })
   })
 })
 
-tape('dir sharing', function (t) {
-  var orig = join(__dirname, 'node_modules')
-  var dest = orig + '_copy'
+tape("dir sharing", function(t) {
+  var orig = join(__dirname, "node_modules")
+  var dest = orig + "_copy"
 
   var a = fsPlug({ enforceWhitelist: false })
   var b = fsPlug()
 
-  a.listen(10000, '127.0.0.1', function () {
+  a.listen(10000, "127.0.0.1", function() {
     var conf = {
       port: 10000,
-      host: 'localhost',
-      type: 'directory',
+      host: "localhost",
+      type: "directory",
       remotePath: orig,
       localPath: dest
     }
 
-    b.consume(conf, function (err) {
+    b.consume(conf, function(err) {
       a.close()
       if (err) t.end(err)
 
-      t.ok(existsSync(dest), 'directory shared')
-      t.same(readdirSync(dest), readdirSync(orig), 'identical dirs')
-      t.is(a.supplied, 1, 'a has supplied 1 dir')
-      t.is(b.consumed, 1, 'b has consumed 1 dir')
+      t.ok(existsSync(dest), "directory shared")
+      t.same(readdirSync(dest), readdirSync(orig), "identical dirs")
+      t.is(a.supplied, 1, "a has supplied 1 dir")
+      t.is(b.consumed, 1, "b has consumed 1 dir")
 
       rimraf(dest, t.end)
     })
   })
 })
 
-tape('consume error on wrong remotePath', function (t) {
-  var orig = 'non_existing_file'
-  var dest = orig + '_copy'
+tape("consume error on wrong remotePath", function(t) {
+  var orig = "non_existing_file"
+  var dest = orig + "_copy"
 
   var a = fsPlug({ enforceWhitelist: false })
   var b = fsPlug()
 
-  a.listen(10000, '127.0.0.1', function () {
+  a.listen(10000, "127.0.0.1", function() {
     var conf = {
       port: 10000,
-      host: 'localhost',
-      type: 'file',
+      host: "localhost",
+      type: "file",
       remotePath: orig,
       localPath: dest
     }
 
-    b.consume(conf, function (err) {
+    b.consume(conf, function(err) {
       a.close()
 
-      t.ok(err, 'expecting a consume timeout error')
+      t.ok(err, "expecting a consume timeout error")
 
       t.end()
     })
   })
 })
 
-tape('in enforceWhitelist mode only whitelisted files are shared', function (t) {
+tape("in enforceWhitelist mode only whitelisted files are shared", function(t) {
   var orig = __filename
-  var dest = orig + '_copy'
+  var dest = orig + "_copy"
 
   var a = fsPlug({ enforceWhitelist: true })
   var b = fsPlug()
 
-  a.listen(10000, '127.0.0.1', function () {
+  a.listen(10000, "127.0.0.1", function() {
     var conf = {
       port: 10000,
-      host: 'localhost',
-      type: 'file',
+      host: "localhost",
+      type: "file",
       remotePath: orig,
       localPath: dest
     }
 
-    b.consume(conf, function (err) {
+    b.consume(conf, function(err) {
       a.close()
 
-      t.ok(err, 'expecting an error')
+      t.ok(err, "expecting an error")
 
       t.end()
     })
   })
 })
 
-tape('emits bytes-supplied, bytes-consumed', function (t) {
+tape("emits bytes-supplied, bytes-consumed", function(t) {
   var orig = __filename
-  var dest = orig + '_copy'
+  var dest = orig + "_copy"
 
   var a = fsPlug({ enforceWhitelist: false })
   var b = fsPlug()
@@ -126,211 +126,211 @@ tape('emits bytes-supplied, bytes-consumed', function (t) {
   var logA = []
   var logB = []
 
-  a.on('bytes-supplied', function (to, bytes) {
+  a.on("bytes-supplied", function(to, bytes) {
     logA.push(bytes)
   })
-  b.on('bytes-consumed', function (from, bytes) {
+  b.on("bytes-consumed", function(from, bytes) {
     logB.push(bytes)
   })
 
-  a.listen(10000, '127.0.0.1', function () {
+  a.listen(10000, "127.0.0.1", function() {
     var conf = {
       port: 10000,
-      host: 'localhost',
-      type: 'file',
+      host: "localhost",
+      type: "file",
       remotePath: orig,
       localPath: dest
     }
 
-    b.consume(conf, function (err) {
+    b.consume(conf, function(err) {
       a.close()
       if (err) t.end(err)
-      
-      t.same(logA, logB, 'written and read num bytes are the same')
-      
+
+      t.same(logA, logB, "written and read num bytes are the same")
+
       rimraf(dest, t.end)
     })
   })
 })
 
-tape('only packing specific entries in a directory', function (t) {
-  var orig = join(__dirname, 'node_modules')
-  var dest = orig + '_copy'
+tape("only packing specific entries in a directory", function(t) {
+  var orig = join(__dirname, "node_modules")
+  var dest = orig + "_copy"
 
   var a = fsPlug({ enforceWhitelist: false })
   var b = fsPlug()
 
-  a.listen(10000, '127.0.0.1', function () {
+  a.listen(10000, "127.0.0.1", function() {
     var conf = {
       port: 10000,
-      host: 'localhost',
-      type: 'directory',
+      host: "localhost",
+      type: "directory",
       remotePath: orig,
       localPath: dest,
-      only: [ './tape' ]
+      only: ["./tape"]
     }
 
-    b.consume(conf, function (err) {
+    b.consume(conf, function(err) {
       a.close()
       if (err) t.end(err)
 
-      var entries = readdirSync(dest).filter(function (entry) {
-        return !entry.startsWith('.')
+      var entries = readdirSync(dest).filter(function(entry) {
+        return !entry.startsWith(".")
       })
 
-      t.ok(entries.length === 1 && entries[0] === 'tape', 'only contains tape')
+      t.ok(entries.length === 1 && entries[0] === "tape", "only contains tape")
 
       rimraf(dest, t.end)
     })
   })
 })
 
-tape('wrong passphrase', function (t) {
+tape("wrong passphrase", function(t) {
   var orig = __filename
-  var dest = orig + '_copy'
+  var dest = orig + "_copy"
 
-  var a = fsPlug({ passphrase: 'sesameopen' })
+  var a = fsPlug({ passphrase: "sesameopen" })
   var b = fsPlug()
 
   a.whitelist(orig)
 
-  a.listen(10000, '127.0.0.1', function () {
+  a.listen(10000, "127.0.0.1", function() {
     var conf = {
       port: 10000,
-      host: 'localhost',
-      type: 'file',
+      host: "localhost",
+      type: "file",
       remotePath: orig,
       localPath: dest,
-      passphrase: 'forgot'
+      passphrase: "forgot"
     }
 
-    b.consume(conf, function (err) {
+    b.consume(conf, function(err) {
       a.close()
 
-      t.ok(err, 'expecting an error')
+      t.ok(err, "expecting an error")
 
       t.end()
     })
   })
 })
 
-tape('correct passphrase', function (t) {
+tape("correct passphrase", function(t) {
   var orig = __filename
-  var dest = orig + '_copy'
-  
-  var passphrase = 'sesameopen'
+  var dest = orig + "_copy"
+
+  var passphrase = "sesameopen"
 
   var a = fsPlug({ passphrase })
   var b = fsPlug()
 
   a.whitelist(orig)
 
-  a.listen(10000, '127.0.0.1', function () {
+  a.listen(10000, "127.0.0.1", function() {
     var conf = {
       port: 10000,
-      host: 'localhost',
-      type: 'file',
+      host: "localhost",
+      type: "file",
       remotePath: orig,
       localPath: dest,
       passphrase
     }
 
-    b.consume(conf, function (err) {
+    b.consume(conf, function(err) {
       a.close()
       if (err) t.end(err)
 
-      t.ok(existsSync(dest), 'file shared')
-      t.same(readFileSync(dest), readFileSync(orig), 'identical files')
-      t.is(a.supplied, 1, 'a has supplied 1 file')
-      t.is(b.consumed, 1, 'b has consumed 1 file')
+      t.ok(existsSync(dest), "file shared")
+      t.same(readFileSync(dest), readFileSync(orig), "identical files")
+      t.is(a.supplied, 1, "a has supplied 1 file")
+      t.is(b.consumed, 1, "b has consumed 1 file")
 
       rimraf(dest, t.end)
     })
   })
 })
 
-tape('resetting passphrase', function (t) {
+tape("resetting passphrase", function(t) {
   var orig = __filename
-  var dest = orig + '_copy'
-  
-  var passphrase = 'sesameopen'
+  var dest = orig + "_copy"
 
-  var a = fsPlug({ passphrase: 'typo' })
+  var passphrase = "sesameopen"
+
+  var a = fsPlug({ passphrase: "typo" })
   var b = fsPlug()
 
   a.whitelist(orig)
   a.setPassphrase(passphrase)
 
-  a.listen(10000, '127.0.0.1', function () {
+  a.listen(10000, "127.0.0.1", function() {
     var conf = {
       port: 10000,
-      host: 'localhost',
-      type: 'file',
+      host: "localhost",
+      type: "file",
       remotePath: orig,
       localPath: dest,
       passphrase
     }
 
-    b.consume(conf, function (err) {
+    b.consume(conf, function(err) {
       a.close()
       if (err) t.end(err)
 
-      t.ok(existsSync(dest), 'file shared')
-      t.same(readFileSync(dest), readFileSync(orig), 'identical files')
-      t.is(a.supplied, 1, 'a has supplied 1 file')
-      t.is(b.consumed, 1, 'b has consumed 1 file')
+      t.ok(existsSync(dest), "file shared")
+      t.same(readFileSync(dest), readFileSync(orig), "identical files")
+      t.is(a.supplied, 1, "a has supplied 1 file")
+      t.is(b.consumed, 1, "b has consumed 1 file")
 
       rimraf(dest, t.end)
     })
   })
 })
 
-tape('resetting supplied, consumed count', function (t) {
+tape("resetting supplied, consumed count", function(t) {
   var orig = __filename
-  var dest = orig + '_copy'
+  var dest = orig + "_copy"
 
   var a = fsPlug()
   var b = fsPlug()
 
   a.whitelist(orig)
 
-  a.listen(10000, '127.0.0.1', function () {
+  a.listen(10000, "127.0.0.1", function() {
     var conf = {
       port: 10000,
-      host: 'localhost',
-      type: 'file',
+      host: "localhost",
+      type: "file",
       remotePath: orig,
       localPath: dest
     }
 
-    b.consume(conf, function (err) {
+    b.consume(conf, function(err) {
       a.close()
       if (err) t.end(err)
 
-      t.ok(existsSync(dest), 'file shared')
-      t.same(readFileSync(dest), readFileSync(orig), 'identical files')
-      t.is(a.supplied, 1, 'a has supplied 1 file')
-      t.is(b.consumed, 1, 'b has consumed 1 file')
+      t.ok(existsSync(dest), "file shared")
+      t.same(readFileSync(dest), readFileSync(orig), "identical files")
+      t.is(a.supplied, 1, "a has supplied 1 file")
+      t.is(b.consumed, 1, "b has consumed 1 file")
 
       a.supplied = b.consumed = 0
-      t.is(a.supplied, 0, 'reset a.supplied count')
-      t.is(b.consumed, 0, 'reset b.consumed count')
+      t.is(a.supplied, 0, "reset a.supplied count")
+      t.is(b.consumed, 0, "reset b.consumed count")
 
       rimraf(dest, t.end)
     })
   })
 })
 
-tape('clearing the whitelist', function (t) {
+tape("clearing the whitelist", function(t) {
   var orig = __filename
 
   var a = fsPlug()
 
   a.whitelist(orig)
 
-  t.is(a._whitelist.size, 1, '1 whitelisted file for alice')
+  t.is(a._whitelist.size, 1, "1 whitelisted file for alice")
   a.clearWhitelist()
-  t.is(a._whitelist.size, 0, '0 whitelisted files for alice')
-  
+  t.is(a._whitelist.size, 0, "0 whitelisted files for alice")
+
   t.end()
 })

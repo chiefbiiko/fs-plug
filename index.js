@@ -1,30 +1,30 @@
-var { createReadStream, createWriteStream, lstat, stat } = require('fs')
-var { connect, Server } = require('net')
-var { inherits } = require('util')
-var { createGzip, createGunzip } = require('zlib')
-var { extract, pack } = require('tar-fs')
-var pump = require('pump')
-var rimraf = require('rimraf')
-var timingSafeEqual = require('crypto').timingSafeEqual
+var { createReadStream, createWriteStream, lstat, stat } = require("fs")
+var { connect, Server } = require("net")
+var { inherits } = require("util")
+var { createGzip, createGunzip } = require("zlib")
+var { extract, pack } = require("tar-fs")
+var pump = require("pump")
+var rimraf = require("rimraf")
+var timingSafeEqual = require("crypto").timingSafeEqual
 
 var ERR = {
-  BLACKLISTED_RESOURCE: Error('request for non-whitelisted resource'),
-  UNSUPPORTED_RESOURCE: Error('request for unsupported resource'),
-  UNAUTHORIZED: Error('unathorized access attempt'),
-  TIMEOUT: Error('consume timeout')
+  BLACKLISTED_RESOURCE: Error("request for non-whitelisted resource"),
+  UNSUPPORTED_RESOURCE: Error("request for unsupported resource"),
+  UNAUTHORIZED: Error("unathorized access attempt"),
+  TIMEOUT: Error("consume timeout")
 }
 
-function noop () {}
+function noop() {}
 
-function xstat (entry, opts, cb) {
+function xstat(entry, opts, cb) {
   opts.dereference ? stat(entry, cb) : lstat(entry, cb)
 }
 
-function Plug (opts, onconsumer) {
+function Plug(opts, onconsumer) {
   if (!(this instanceof Plug)) return new Plug(opts, onconsumer)
   Server.call(this)
 
-  if (typeof opts === 'function') {
+  if (typeof opts === "function") {
     onconsumer = opts
     opts = {}
   }
@@ -34,37 +34,39 @@ function Plug (opts, onconsumer) {
 
   this._opts = opts
   this._opts.dereference = !!opts.dereference
-  this._opts.timeout = typeof opts.timeout === 'number' ? opts.timeout : 500
+  this._opts.timeout = typeof opts.timeout === "number" ? opts.timeout : 500
   this._opts.enforceWhitelist = opts.enforceWhitelist !== false
-  this._opts.passphrase = typeof opts.passphrase === 'string' || Buffer.isBuffer(opts.passphrase)
-    ? Buffer.from(opts.passphrase) : null
+  this._opts.passphrase =
+    typeof opts.passphrase === "string" || Buffer.isBuffer(opts.passphrase)
+      ? Buffer.from(opts.passphrase)
+      : null
 
   this._supplied = 0
   this._consumed = 0
   this._whitelist = new Set(opts.whitelist)
 
-  Object.defineProperty(this, 'supplied', {
-    get () {
+  Object.defineProperty(this, "supplied", {
+    get() {
       return this._supplied
     },
-    set (count) {
+    set(count) {
       this._supplied = count
     }
   })
-  
-  Object.defineProperty(this, 'consumed', {
-    get () {
+
+  Object.defineProperty(this, "consumed", {
+    get() {
       return this._consumed
     },
-    set (count) {
+    set(count) {
       this._consumed = count
     }
   })
 
   var self = this
 
-  self.on('connection', function (socket) {
-    socket.once('data', function (buf) {
+  self.on("connection", function(socket) {
+    socket.once("data", function(buf) {
       var preflight
       try {
         preflight = JSON.parse(buf)
@@ -75,10 +77,12 @@ function Plug (opts, onconsumer) {
 
       if (self._opts.passphrase) {
         var pass = Buffer.from(preflight.passphrase)
-        if (pass.length !== self._opts.passphrase.length ||
-            !timingSafeEqual(pass, self._opts.passphrase)) {
+        if (
+          pass.length !== self._opts.passphrase.length ||
+          !timingSafeEqual(pass, self._opts.passphrase)
+        ) {
           socket.destroy()
-          return onconsumer(ERR.UNAUTHORIZED)  
+          return onconsumer(ERR.UNAUTHORIZED)
         }
       }
 
@@ -87,7 +91,7 @@ function Plug (opts, onconsumer) {
         return onconsumer(ERR.BLACKLISTED_RESOURCE)
       }
 
-      xstat(preflight.path, self._opts, function (err, stats) {
+      xstat(preflight.path, self._opts, function(err, stats) {
         if (err) {
           socket.destroy()
           return onconsumer(err)
@@ -104,11 +108,11 @@ function Plug (opts, onconsumer) {
           return onconsumer(ERR.UNSUPPORTED_RESOURCE)
         }
 
-        var interval = setInterval(function () {
-          self.emit('bytes-supplied', socket.bytesWritten)
+        var interval = setInterval(function() {
+          self.emit("bytes-supplied", socket.bytesWritten)
         }, 250)
 
-        pump(readStream, createGzip(), socket, function (err) {
+        pump(readStream, createGzip(), socket, function(err) {
           clearInterval(interval)
           if (err) return onconsumer(err)
           self._supplied++
@@ -121,7 +125,7 @@ function Plug (opts, onconsumer) {
 
 inherits(Plug, Server)
 
-Plug.prototype.consume = function (conf, cb) {
+Plug.prototype.consume = function(conf, cb) {
   var self = this
   var preflight = {
     path: conf.remotePath,
@@ -131,53 +135,59 @@ Plug.prototype.consume = function (conf, cb) {
 
   if (!cb) cb = noop
 
-  var socket = connect(conf.port, conf.host, function () {
-    socket.write(JSON.stringify(preflight), function () {
-      var dump = conf.type === 'file'
-        ? createWriteStream(conf.localPath) : extract(conf.localPath)
+  var socket = connect(
+    conf.port,
+    conf.host,
+    function() {
+      socket.write(JSON.stringify(preflight), function() {
+        var dump =
+          conf.type === "file"
+            ? createWriteStream(conf.localPath)
+            : extract(conf.localPath)
 
-      socket.once('readable', function () {
-        var interval = setInterval(function () {
-          self.emit('bytes-consumed', dump.bytesWritten)
-        }, 250)
+        socket.once("readable", function() {
+          var interval = setInterval(function() {
+            self.emit("bytes-consumed", dump.bytesWritten)
+          }, 250)
 
-        pump(socket, createGunzip(), dump, function (err) {
-          clearInterval(interval)
-          if (err) return cb(err)
-          self._consumed++
-          cb(null, conf.localPath)
+          pump(socket, createGunzip(), dump, function(err) {
+            clearInterval(interval)
+            if (err) return cb(err)
+            self._consumed++
+            cb(null, conf.localPath)
+          })
+
+          setTimeout(function() {
+            if (!socket.bytesRead) {
+              socket.destroy(ERR.TIMEOUT)
+              rimraf(conf.localPath, noop)
+            }
+          }, self._opts.timeout)
         })
-
-        setTimeout(function () {
-          if (!socket.bytesRead) {
-            socket.destroy(ERR.TIMEOUT)
-            rimraf(conf.localPath, noop)
-          }
-        }, self._opts.timeout)
       })
-    })
-  })
+    }
+  )
 }
 
-Plug.prototype.whitelist = function (filepath) {
+Plug.prototype.whitelist = function(filepath) {
   return this._whitelist.add(filepath)
 }
 
-Plug.prototype.blacklist = function (filepath) {
+Plug.prototype.blacklist = function(filepath) {
   return this._whitelist.delete(filepath)
 }
 
-Plug.prototype.enforceWhitelist = function (v) {
+Plug.prototype.enforceWhitelist = function(v) {
   this._opts.enforceWhitelist = !!v
 }
 
-Plug.prototype.clearWhitelist = function () {
+Plug.prototype.clearWhitelist = function() {
   this._whitelist.clear()
 }
 
-Plug.prototype.setPassphrase = function (passphrase) {
-  if (typeof passphrase === 'string' || Buffer.isBuffer(passphrase)) {
-    this._opts.passphrase = Buffer.from(passphrase)  
+Plug.prototype.setPassphrase = function(passphrase) {
+  if (typeof passphrase === "string" || Buffer.isBuffer(passphrase)) {
+    this._opts.passphrase = Buffer.from(passphrase)
   }
 }
 

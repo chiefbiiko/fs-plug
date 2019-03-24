@@ -21,28 +21,29 @@ npm install --save fs-plug
 ``` js
 var plug = require('fs-plug')
 
-// alice and bob on two different computers
-var a = plug({ enforceWhitelist: true }) // default
+// alice and bob on two different computers in the same local network
+var a = plug()
 var b = plug()
 
 // alice allows file to be consumed by peers requesting it
 a.whitelist(__filename)
 
 // listen for connections
-a.listen(10000, 'localhost', function () {
+a.listen(10000, function() {
   // bobs consume config
   var conf = {
     port: 10000,
-    host: 'localhost',
-    type: 'file',
+    host: "localhost",
+    type: "file",
     remotePath: __filename,
-    localPath: __filename + '_copy'
+    localPath: "example"
   }
   // bob consuming from alice
-  b.consume(conf, function (err, localPath) {
+  b.consume(conf, function(err, localPath) {
     if (err) return console.error(err)
-    console.log('file saved as:', localPath)
+    console.log("file saved as:", localPath)
     a.close()
+    b.close()
   })
 })
 ```
